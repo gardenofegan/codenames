@@ -5,19 +5,20 @@ Vue.use(Vuex);
 
 export default new Vuex.Store({
   state: {
-    connect: false,
+    connected: false,
     game: {},
     room: '',
     username: '',
     error: '',
     turn: '',
+    spymasterReveal: false,
   },
   mutations: {
     SOCKET_CONNECT(state) {
-      state.connect = true;
+      state.connected = true;
     },
     SOCKET_DISCONNECT(state) {
-      state.connect = false;
+      state.connected = false;
     },
     SOCKET_MESSAGE(state, message) {
       state.game = message;
@@ -43,6 +44,13 @@ export default new Vuex.Store({
     },
     set_username(state, username) {
       state.username = username;
+    },
+    reset_error(state) {
+      state.room = '';
+      state.error = '';
+    },
+    reveal_spymaster(state) {
+      state.spymasterReveal = true;
     },
   },
 });

@@ -2,17 +2,20 @@
   <v-app dark>
     <main>
       <v-content>
-        <v-toolbar :color="getColor" dark fixed scroll-off-screen v-if="room">
+        <v-toolbar :color="getColor" dark fixed scroll-off-screen v-if="!error && room">
           <v-toolbar-title>{{room}}</v-toolbar-title>
           <v-spacer></v-spacer>
-          <!-- <v-toolbar-title class="hidden-xs-only">{{getTurn}}</v-toolbar-title> -->
-          <!-- <v-spacer></v-spacer> -->
-          <v-btn flat large @click="nextTurn">
-            Next Turn<v-icon medium>skip_next</v-icon>
-          </v-btn>
+          <v-toolbar-title v-if="isFirstTurn">{{getTurn}}</v-toolbar-title>
         </v-toolbar>
+        <v-alert color="error" icon="warning" value="true" v-if="error" fixed>
+          {{error}}
+        </v-alert>
 
-        <v-container fill-height fluid pr-2 pl-2 style="overflow-y: auto;">
+        <v-container v-if="error">
+          <router-view>
+          </router-view>
+        </v-container>
+        <v-container fill-height fluid pr-2 pl-2 style="overflow-y: auto;" v-else>
           <router-view>
           </router-view>
         </v-container>
@@ -51,15 +54,18 @@
           </v-list>
         </v-navigation-drawer>
 
-        <v-bottom-nav value="true" class="secondary">
+        <v-bottom-nav value="true" :class="{ 'secondary': connected, 'red darken-1 text--white': !connected }">
           <v-btn flat replace :to="{ name: 'Home' }">
             <v-icon medium>home</v-icon> Home
           </v-btn>
           <v-spacer></v-spacer>
-          <v-btn flat replace :to="{ name: 'Player', params: { room: room }}" v-if="room">
+          <v-btn flat v-if="!connected" value="false">
+            <v-icon medium>warning</v-icon> Not Connected
+          </v-btn>
+          <v-btn flat replace :to="{ name: 'Player', params: { room: room }}" v-if="room && connected && !error">
             <v-icon medium>person</v-icon> Agent
           </v-btn>
-          <v-btn flat replace :to="{ name: 'Spymaster', params: { room: room }}" v-if="room">
+          <v-btn flat replace :to="{ name: 'Spymaster', params: { room: room }}" v-if="room && connected && !error">
             <v-icon medium>local_library</v-icon> Spymaster
           </v-btn>
           <v-spacer></v-spacer>
@@ -108,27 +114,47 @@ export default {
     };
   },
   computed: {
-    ...mapState(['room', 'error', 'game', 'turn']),
-    getColor() {
-      switch (this.turn) {
-        case 'R':
-          return 'red darken-1';
-        case 'G':
-          return 'green lighten-1';
-        case 'B':
-          return 'blue darken-1';
-        default:
-          return 'secondary';
+    ...mapState(['connected', 'room', 'error', 'game', 'turn']),
+    isFirstTurn() {
+      if (!this.connected) {
+        return true;
       }
+      if (this.game.board) {
+        return Object.values(this.game.board).every(e => e === false);
+      }
+      return true;
+    },
+    getColor() {
+      // override bar color if ws not connected
+      if (!this.connected) {
+        return 'red darken-1';
+      }
+      if (this.isFirstTurn) {
+        switch (this.turn) {
+          case 'R':
+            return 'red darken-1';
+          case 'G':
+            return 'green lighten-1';
+          case 'B':
+            return 'blue darken-1';
+          default:
+            return 'secondary';
+        }
+      }
+      return 'secondary';
     },
     getTurn() {
+      // override starting team text if ws is not connected
+      if (!this.connected) {
+        return 'Unable to connect to server.';
+      }
       switch (this.turn) {
         case 'R':
-          return 'Red\'s Turn';
+          return 'Red Team Starts';
         case 'G':
-          return 'Green\'s Turn';
+          return 'Green Team Starts';
         case 'B':
-          return 'Blue\'s Turn';
+          return 'Blue Team Starts';
         default:
           return '';
       }
@@ -136,19 +162,6 @@ export default {
   },
   methods: {
     ...mapMutations(['set_turn']),
-    nextTurn() {
-      if (this.turn === 'R') {
-        this.set_turn('B');
-      } else if (this.turn === 'B') {
-        if (this.game.teams === 3) {
-          this.set_turn('G');
-        } else {
-          this.set_turn('R');
-        }
-      } else {
-        this.set_turn('R');
-      }
-    },
   },
 };
 </script>
